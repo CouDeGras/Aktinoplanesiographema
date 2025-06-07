@@ -26,11 +26,16 @@ cdef np.ndarray[f32_t, ndim=3] cartesian_to_polar(np.ndarray[f32_t, ndim=3] data
     cdef int i, j, row, ystep, xstep
     cdef float slope, diagx, ux, uy
 
-    # axis copies
-    ret[0:halfw+1, halfh, :]                         = data[halfh, halfw::-1, :]
-    ret[0:halfw+1, height+width-2+halfh, :]          = data[halfh, halfw:halfw*2+1, :]
-    ret[0:halfh+1, height-1+halfw, :]                = data[halfh:halfh*2+1, halfw, :]
-    ret[0:halfw+1, perimeter-halfw, :]               = data[halfh::-1, halfw, :]
+    # ───────────── axis copies (contiguous via .copy()) ─────────────
+    # horizontal axis – length = halfw + 1
+    ret[0:halfw+1,  halfh,                :] = data[halfh,           halfw::-1,      :].copy()
+    ret[0:halfw+1,  height+width-2+halfh, :] = data[halfh,           halfw:halfw*2+1, :].copy()
+
+    # vertical axis – length = halfh + 1
+    ret[0:halfh+1,  height-1+halfw,       :] = data[halfh:halfh*2+1, halfw,          :].copy()
+    ret[0:halfh+1,  perimeter-halfw,      :] = data[halfh::-1,       halfw,          :].copy()
+
+
 
     # 4 top/bottom triangles
     for i in range(halfh):
@@ -168,15 +173,16 @@ cpdef np.ndarray[f32_t, ndim=2] vertical_gaussian(
 
 cpdef list get_gauss(int n):
     cdef float sigma = 0.3*(n/2 - 1) + 0.8
+    cdef int half = n // 2                 # centred half-width (positive)
     cdef int x
     cdef list r = []
     cdef float tot = 0.0
-    for x in range(-n//2, n//2+1):
+    for x in range(-half, half + 1):       # ← correct, matches original Python
         val = (1/(sigma*math.sqrt(2*math.pi))) * math.exp(-x*x/(2*sigma*sigma))
         r.append(val)
         tot += val
-    # normalize
-    return [v/tot for v in r]
+    return [v / tot for v in r]
+
 
 
 cpdef object add_jitter(im, int pixels=1):
@@ -191,18 +197,161 @@ cpdef object add_jitter(im, int pixels=1):
     ))
 
 
+# ---------------------------------------------------------------------------
+# 🔄  Replace the current stub of blend_images with the full implementation
+# ---------------------------------------------------------------------------
 cpdef object blend_images(im, og_im, float alpha=1.0, float strength=1.0):
-    """PIL-based merging/resizing left in Python."""
-    og_im.putalpha(<int>(255*alpha))
-    og_im = og_im.resize((
-        round((1 + 0.018*strength) * og_im.width),
-        round((1 + 0.018*strength) * og_im.height)
-    ), Image.LANCZOS)
-    # …centre & composite as in original…
-    return im  # fill in original logic here
+    """
+    Alpha–blends `og_im` on top of `im`, after a slight scale-up that
+    matches the chromatic expansion factor. 100 % Python/PIL code – no
+    performance concerns here.
+    """
+    if alpha <= 0.0:
+        # nothing to blend
+        return im
+
+    # 1) add alpha channel to original image
+    og_im = og_im.copy()
+    og_im.putalpha(<int>(255 * alpha))
+
+    # 2) enlarge the overlay using the same 0.018·strength scale factor
+    og_im = og_im.resize(
+        (
+            round((1.0 + 0.018 * strength) * og_im.width),
+            round((1.0 + 0.018 * strength) * og_im.height),
+        ),
+        Image.LANCZOS,          # ≈ PIL.Image.ANTIALIAS in modern Pillow
+    )
+
+    # 3) centre-crop overlay so it matches `im`'s size
+    cdef int hdiff = (og_im.height - im.height) // 2
+    cdef int wdiff = (og_im.width  - im.width)  // 2
+    og_im = og_im.crop(
+        (wdiff, hdiff, wdiff + im.width, hdiff + im.height)
+    )
+
+    # 4) composite
+    im_rgba = im.convert("RGBA")
+    base    = Image.new("RGBA", im.size)
+    base    = Image.alpha_composite(base, im_rgba)
+    base    = Image.alpha_composite(base, og_im)
+
+    return base.convert("RGB")
+
 
 
 cpdef object add_chromatic(im, float strength=1.0, bint no_blur=False):
-    """Split channels → polar → blur → cartesian → PIL merge."""
-    # …call cartesian_to_polar, vertical_gaussian, polar_to_cartesian…
-    return im  # fill in original logic here
+    """
+    Radial chromatic-aberration effect – Cython version.
+    """
+    # --------  NEW SAFETY CROPPING  -----------------------------------
+    # 1. declare the ints at the top level
+    cdef int new_w, new_h
+
+    if (im.width % 2 == 0) or (im.height % 2 == 0):
+        new_w = im.width  - (1 if im.width  % 2 == 0 else 0)
+        new_h = im.height - (1 if im.height % 2 == 0 else 0)
+        im = im.crop((0, 0, new_w, new_h))
+    # ------------------------------------------------------------------
+    # 1) Split channels and cast to float32 NumPy arrays
+    # ------------------------------------------------------------------
+    r, g, b = im.split()
+    cdef np.ndarray[f32_t, ndim=2] r_np = np.asarray(r, dtype=np.float32)
+    cdef np.ndarray[f32_t, ndim=2] g_np = np.asarray(g, dtype=np.float32)
+    cdef np.ndarray[f32_t, ndim=2] b_np = np.asarray(b, dtype=np.float32)
+
+    # ------------------------------------------------------------------
+    # 2) Top-level typed variables  (MUST be one per line)
+    # ------------------------------------------------------------------
+    cdef np.ndarray[f32_t, ndim=3] rgb = None
+    cdef np.ndarray[f32_t, ndim=3] poles = None
+    cdef np.ndarray[f32_t, ndim=2] r_pol
+    cdef np.ndarray[f32_t, ndim=2] g_pol
+    cdef np.ndarray[f32_t, ndim=2] b_pol
+    cdef np.ndarray[f32_t, ndim=3] cartes = None
+    cdef float blur
+    cdef int   br
+
+
+    cdef object r_final = r     # default in case no_blur is True
+    cdef object g_final = g
+    cdef object b_final = b
+
+    # ------------------------------------------------------------------
+    # 3) Heavy maths only if we really blur
+    # ------------------------------------------------------------------
+    if not no_blur:
+        # stack channels → polar space
+        rgb = np.ascontiguousarray(
+            np.stack([r_np, g_np, b_np], axis=-1), dtype=np.float32
+        )
+
+        poles = cartesian_to_polar(rgb)
+        r_pol, g_pol, b_pol = poles[:, :, 0], poles[:, :, 1], poles[:, :, 2]
+
+        # adaptive blur radius
+        blur = (im.width + im.height - 2) / 100.0 * strength
+        br   = <int>round(blur)
+
+        if br > 0:
+            r_pol = vertical_gaussian(r_pol, br)
+            g_pol = vertical_gaussian(g_pol, <int>round(blur * 1.2))
+            b_pol = vertical_gaussian(b_pol, <int>round(blur * 1.4))
+
+        cartes = polar_to_cartesian(
+            np.stack([r_pol, g_pol, b_pol], axis=-1),
+            im.width, im.height
+        )
+
+        cartes = np.clip(cartes, 0.0, 255.0)
+        r_final = Image.fromarray(cartes[:, :, 0].astype(np.uint8), "L")
+        g_final = Image.fromarray(cartes[:, :, 1].astype(np.uint8), "L")
+        b_final = Image.fromarray(cartes[:, :, 2].astype(np.uint8), "L")
+
+    # ------------------------------------------------------------------
+    # 4) Channel expansion
+    # ------------------------------------------------------------------
+    g_final = g_final.resize(
+        (
+            round((1.0 + 0.018 * strength) * r.width),
+            round((1.0 + 0.018 * strength) * r.height),
+        ),
+        Image.LANCZOS,
+    )
+    b_final = b_final.resize(
+        (
+            round((1.0 + 0.044 * strength) * r.width),
+            round((1.0 + 0.044 * strength) * r.height),
+        ),
+        Image.LANCZOS,
+    )
+
+    # ------------------------------------------------------------------
+    # 5) Centre-align & merge
+    # ------------------------------------------------------------------
+    cdef int rhdiff = (b_final.height - r_final.height) // 2
+    cdef int rwdiff = (b_final.width  - r_final.width)  // 2
+    cdef int ghdiff = (b_final.height - g_final.height) // 2
+    cdef int gwdiff = (b_final.width  - g_final.width)  // 2
+
+    merged = Image.merge(
+        "RGB",
+        (
+            r_final.crop((-rwdiff, -rhdiff,
+                          b_final.width - rwdiff,
+                          b_final.height - rhdiff)),
+            g_final.crop((-gwdiff, -ghdiff,
+                          b_final.width - gwdiff,
+                          b_final.height - ghdiff)),
+            b_final,
+        ),
+    )
+
+    # restore original odd dimensions
+    return merged.crop(
+        (
+            rwdiff, rhdiff,
+            rwdiff + r_final.width,
+            rhdiff + r_final.height,
+        )
+    )
