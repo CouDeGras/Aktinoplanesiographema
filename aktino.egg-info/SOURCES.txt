@@ -1,0 +1,13 @@
+LICENSE
+README.md
+pyproject.toml
+setup.py
+aktino/__init__.py
+aktino/__main__.py
+aktino/core.c
+aktino.egg-info/PKG-INFO
+aktino.egg-info/SOURCES.txt
+aktino.egg-info/dependency_links.txt
+aktino.egg-info/not-zip-safe
+aktino.egg-info/requires.txt
+aktino.egg-info/top_level.txt
