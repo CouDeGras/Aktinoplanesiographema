@@ -1,6 +1,6 @@
-## Forked from yoonsikp/kromo:master
+Forked from yoonsikp/kromo:master
 
-## Rewritten in Cython for performance
+Rewritten in Cython for performance (negligible)
 
 
 # Aktinoplanesiographema
@@ -64,7 +64,7 @@ rm -rf .venv build dist *.egg-info \
 | **`No module named PIL`**              | `pip install Pillow` inside the venv.                                                                        |
 | **Slow build on ARM boards**           | Use `pip install --no-build-isolation .` (assumes Cython & NumPy already in the venv).                       |
 
-Enjoy!
+
 
 
 
