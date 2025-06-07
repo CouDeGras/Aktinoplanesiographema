@@ -10,8 +10,8 @@
 
 ```bash
 # 1. Clone or unpack the source
-git clone https://github.com/yourname/aktino.git
-cd aktino        # project root (contains setup.py, pyproject.toml)
+git clone https://github.com/CouDeGras/Aktinoplanesiographema.git
+cd Aktinoplanesiographema        # project root (contains setup.py, pyproject.toml)
 
 # 2. Create and activate an isolated environment
 python3 -m venv .venv
@@ -34,14 +34,7 @@ python -m aktino -s 0.3 -j 1 -o out.jpg path/to/photo.jpg
 ---
 
 ## Requirements
-
-| Package          | Tested version       | Notes                       |
-| ---------------- | -------------------- | --------------------------- |
-| **Python ≥ 3.8** | 3.12                 | Other 3.x work too          |
-| **Pillow**       | 11.2                 | Image I/O & resizing        |
-| **NumPy**        | 2.2                  | Provides `float32` arrays   |
-| **Cython**       | 3.1                  | Compiles `aktino/core.pyx`  |
-| Build toolchain  | GCC ≥ 9 / clang ≥ 12 | `make`, `python3-dev`, etc. |
+idk
 
 On Debian/Ubuntu/WSL:
 
