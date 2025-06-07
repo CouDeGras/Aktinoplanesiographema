@@ -1,9 +1,7 @@
 Forked from yoonsikp/kromo:master
 Rewritten in Cython for performance
 
----
 
-````markdown
 # Aktino – Cython-accelerated radial-chromatic-aberration filter
 
 ## Quick-start (Linux / WSL / macOS)
@@ -90,8 +88,7 @@ rm -rf .venv build dist *.egg-info \
 
 Enjoy!
 
-```
-```
+
 
 # kromo
 `kromo` is a play on words, combining "chromatic aberration" and "lo-mo photography". I made `kromo` because perfect optics are overrated.
