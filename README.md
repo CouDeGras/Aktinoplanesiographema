@@ -1,3 +1,98 @@
+Forked from yoonsikp/kromo:master
+Rewritten in Cython for performance
+
+---
+
+````markdown
+# Aktino – Cython-accelerated radial-chromatic-aberration filter
+
+## Quick-start (Linux / WSL / macOS)
+
+```bash
+# 1. Clone or unpack the source
+git clone https://github.com/yourname/aktino.git
+cd aktino        # project root (contains setup.py, pyproject.toml)
+
+# 2. Create and activate an isolated environment
+python3 -m venv .venv
+source .venv/bin/activate       # on Windows use: .venv\Scripts\activate.bat
+
+# 3. Upgrade packaging tools
+pip install --upgrade pip setuptools wheel
+
+# 4. Build + install (compiles the Cython extension)
+pip install .
+
+# 5. Test-drive
+python -m aktino -h                             # CLI help
+python -m aktino -s 0.3 -j 1 -o out.jpg path/to/photo.jpg
+````
+
+> **Result:** `out.jpg` contains a film-style red/green/blue fringe +
+> polar Gaussian blur, computed with a C extension for 4-10× speed-up.
+
+---
+
+## Requirements
+
+| Package          | Tested version       | Notes                       |
+| ---------------- | -------------------- | --------------------------- |
+| **Python ≥ 3.8** | 3.12                 | Other 3.x work too          |
+| **Pillow**       | 11.2                 | Image I/O & resizing        |
+| **NumPy**        | 2.2                  | Provides `float32` arrays   |
+| **Cython**       | 3.1                  | Compiles `aktino/core.pyx`  |
+| Build toolchain  | GCC ≥ 9 / clang ≥ 12 | `make`, `python3-dev`, etc. |
+
+On Debian/Ubuntu/WSL:
+
+```bash
+sudo apt update
+sudo apt install build-essential python3-dev
+```
+
+Pip pulls the pure-Python deps automatically during step 4.
+
+---
+
+## Windows 10/11 notes
+
+```cmd
+REM inside PowerShell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install --upgrade pip setuptools wheel
+pip install .
+```
+
+*Requires a C/C++ compiler*:
+– Visual Studio Build Tools 2022 or
+– `mingw-w64` (MSYS2) with `CLANG64`.
+
+---
+
+## Uninstall / clean
+
+```bash
+deactivate          # leave venv
+rm -rf .venv build dist *.egg-info \
+       aktino/core*.c aktino/core*.so
+```
+
+---
+
+## Troubleshooting
+
+| Symptom                                | Fix                                                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **`ModuleNotFoundError: aktino.core`** | You’re running from the project folder. Move outside, or delete the local `aktino/` directory after install. |
+| **`No module named PIL`**              | `pip install Pillow` inside the venv.                                                                        |
+| **Slow build on ARM boards**           | Use `pip install --no-build-isolation .` (assumes Cython & NumPy already in the venv).                       |
+
+Enjoy!
+
+```
+```
+
 # kromo
 `kromo` is a play on words, combining "chromatic aberration" and "lo-mo photography". I made `kromo` because perfect optics are overrated.
 ## Before & After
