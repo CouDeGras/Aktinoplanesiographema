@@ -1,4 +1,6 @@
 # ignore virtual environments
 .venv/
 .build/
-.aktino.egg-info/
+# ignore package metadata
+*.egg-info/
+
