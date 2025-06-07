@@ -1,6 +1,6 @@
 # ignore virtual environments
 .venv/
-.build/
+build/
 # ignore package metadata
 *.egg-info/
 
