@@ -3,9 +3,10 @@
 ## Rewritten in Cython for performance
 
 
-# Aktino – Cython-accelerated radial-chromatic-aberration filter
+# Aktinoplanesiographema
 
-## Quick-start (Linux / WSL / macOS)
+
+## Quick-start (Linux / WSL)
 
 ```bash
 # 1. Clone or unpack the source
@@ -51,23 +52,6 @@ sudo apt install build-essential python3-dev
 
 Pip pulls the pure-Python deps automatically during step 4.
 
----
-
-## Windows 10/11 notes
-
-```cmd
-REM inside PowerShell
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install --upgrade pip setuptools wheel
-pip install .
-```
-
-*Requires a C/C++ compiler*:
-– Visual Studio Build Tools 2022 or
-– `mingw-w64` (MSYS2) with `CLANG64`.
-
----
 
 ## Uninstall / clean
 
