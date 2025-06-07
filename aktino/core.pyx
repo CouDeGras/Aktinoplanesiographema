@@ -92,11 +92,14 @@ cdef np.ndarray[f32_t, ndim=3] polar_to_cartesian(
     cdef int i, j, row, ystep, xstep
     cdef float slope, diagx, ux, uy
 
-    # div0 (axes)
-    ret[halfh, halfw::-1, :]                   = data[0:halfw+1, halfh, :]
-    ret[halfh, halfw:halfw*2+1, :]             = data[0:halfw+1, height+width-2+halfh, :]
-    ret[halfh:halfh*2+1, halfw, :]             = data[0:halfh+1, height-1+halfw, :]
-    ret[halfh::-1, halfw, :]                   = data[0:halfw+1, perimeter-halfw, :]
+    # ──────────────── div0 / axis copies (contiguous) ────────────────
+    # horizontal axis – length = halfw + 1
+    ret[halfh, halfw::-1, :]            = data[0:halfw+1, halfh,                 :].copy()
+    ret[halfh, halfw:halfw*2+1, :]      = data[0:halfw+1, height+width-2+halfh,  :].copy()
+
+    # vertical axis – length = halfh + 1
+    ret[halfh:halfh*2+1, halfw, :]      = data[0:halfh+1, height-1+halfw,        :].copy()
+    ret[halfh::-1,        halfw, :]     = data[0:halfh+1, perimeter-halfw,       :].copy()
 
     # part1
     for i in range(halfh):
