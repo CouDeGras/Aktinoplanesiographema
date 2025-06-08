@@ -3,15 +3,15 @@ Forked from yoonsikp/kromo:master
 Rewritten in Cython for performance (negligible)
 
 
-# Aktinoplanesiographema
+# Aktinoplanesiographe
 
 
 ## Quick-start (Linux / WSL)
 
 ```bash
 # 1. Clone or unpack the source
-git clone https://github.com/CouDeGras/Aktinoplanesiographema.git
-cd Aktinoplanesiographema        # project root (contains setup.py, pyproject.toml)
+git clone https://github.com/CouDeGras/Aktinoplanesiographe.git
+cd Aktinoplanesiographe        # project root (contains setup.py, pyproject.toml)
 
 # 2. Create and activate an isolated environment
 python3 -m venv .venv
